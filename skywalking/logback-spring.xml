@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+
+
+    <!--配置从springcloud的配置文件中读取配置-->
+    <springProperty scope="context" name="basepath" source="microservices.base" defaultValue="/opt/swsc"/>
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="app"/>
+    <springProperty scope="context" name="hostname" source="hostname" defaultValue="hostname"/>
+    <springProperty scope="context" name="port" source="server.port" defaultValue="123"/>
+
+    <!--设置存储路径变量-->
+    <property name="LOG_HOME" value="${basepath}/${appName}"/>
+    <property name="LOG_NAME" value="${hostname}_${port}"/>
+    <property name="LOG_BACKUP_PATH" value="/opt/swsc/wfw_logs_backup/${appName}" />
+
+    <appender name="skywalking" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="org.apache.skywalking.apm.toolkit.log.logback.v1.x.mdc.TraceIdMDCPatternLogbackLayout">
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [${appName}] [%X{tid}] [%thread] [%X{gid}] [%X{X-B3-TraceId:-}] %-5level [%logger{36}:%L] [%X{userId}] -%msg%n</Pattern>
+            </layout>
+        </encoder>
+        <!--日志名,指定最新的文件名，其他文件名使用FileNamePattern -->
+        <File>${LOG_HOME}/${LOG_NAME}.log</File>
+        <!--文件滚动模式-->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--日志文件输出的文件名,可设置文件类型为gz,开启文件压缩-->
+            <FileNamePattern>${LOG_BACKUP_PATH}/%d{yyyyMMdd}/${LOG_NAME}.log.%d{yyyy-MM-dd}.%i.gz</FileNamePattern>
+            <!--日志文件保留天数-->
+            <MaxHistory>90</MaxHistory>
+            <!--按大小分割同一天的-->
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>100MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+    </appender>
+
+    <!-- 上传日志到skywalking的appender -->
+    <appender name="grpc-log" class="org.apache.skywalking.apm.toolkit.log.logback.v1.x.log.GRPCLogClientAppender">
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="org.apache.skywalking.apm.toolkit.log.logback.v1.x.mdc.TraceIdMDCPatternLogbackLayout">
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [${appName}] [%X{tid}] [%thread] [%X{gid}] [%X{X-B3-TraceId:-}] %-5level [%logger{36}:%L] [%X{userId}] -%msg%n</Pattern>
+            </layout>
+        </encoder>
+    </appender>
+
+
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="org.apache.skywalking.apm.toolkit.log.logback.v1.x.mdc.TraceIdMDCPatternLogbackLayout">
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [${appName}] [%X{tid}] [%thread] [%X{gid}] [%X{X-B3-TraceId:-}] %-5level [%logger{36}:%L] [%X{userId}] -%msg%n</Pattern>
+            </layout>
+        </encoder>
+    </appender>
+
+    <!--指定基础的日志输出级别-->
+    <root level="INFO">
+        <appender-ref ref="stdout"/>
+        <appender-ref ref="skywalking"/>
+        <appender-ref ref="grpc-log" />
+    </root>
+</configuration>
